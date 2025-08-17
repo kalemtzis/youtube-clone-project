@@ -11,8 +11,11 @@ import {
 import { personalItems } from "../constants";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useAuth, useClerk } from "@clerk/nextjs";
 
 export const PersonalSection = () => {
+  const clerk = useClerk();
+  const { isSignedIn } = useAuth();
   const pathname = usePathname();
 
   return (
@@ -26,7 +29,12 @@ export const PersonalSection = () => {
                 tooltip={item.title}
                 asChild
                 isActive={pathname === item.href} // TODO: Change to look at current pathname
-                onClick={() => {}} // TODO: Do something on click
+                onClick={(e) => {
+                  if (!isSignedIn && item.auth) {
+                    e.preventDefault();
+                    return clerk.openSignIn();
+                  }
+                }}
               >
                 <Link href={item.href} className="flex items-center gap-4">
                   <item.icon />
