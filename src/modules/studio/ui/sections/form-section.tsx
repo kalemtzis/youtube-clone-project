@@ -18,8 +18,11 @@ import {
   CopyCheckIcon,
   CopyIcon,
   Globe2Icon,
+  ImagePlusIcon,
   LockIcon,
   MoreVerticalIcon,
+  RotateCcwIcon,
+  SparkleIcon,
   Trash,
 } from "lucide-react";
 import { useForm } from "react-hook-form";
@@ -49,6 +52,8 @@ import { VideoPlayer } from "@/modules/videos/ui/components/video-player";
 import Link from "next/link";
 import { snakeCaseToTitle } from "@/lib/utils";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
+import { THUMBNAIL_FALLBACK } from "@/constants";
 
 interface Props {
   videoId: string;
@@ -209,7 +214,52 @@ const FormSectionSuspense = ({ videoId }: Props) => {
                 </FormItem>
               )}
             />
-            {/* TODO: add thumbnail */}
+
+            <FormField
+              control={form.control}
+              name="thumbnailUrl"
+              render={() => (
+                <FormItem>
+                  <FormLabel>Thumbnail</FormLabel>
+                  <FormControl>
+                    <div className="p-0.5 border border-dashed border-neutral-400 relative h-[84px] w-[153px] group">
+                      <Image
+                        alt="thumbnail"
+                        src={video.thumbnailUrl || THUMBNAIL_FALLBACK}
+                        fill
+                        className="object-cover"
+                      />
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            type="button"
+                            size="icon"
+                            className="bg-black/50 hover:bg-black/50 absolute top-1 right-1 cursor-pointer rounded-full opcacity-100 md:opacity-0 group-hover:opacity-100 duration-300 size-7"
+                          >
+                            <MoreVerticalIcon className="text-white" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="start" side="right">
+                          <DropdownMenuItem className="cursor-pointer">
+                            <ImagePlusIcon className="size-4 mr-1" />
+                            Change
+                          </DropdownMenuItem>
+                          <DropdownMenuItem className="cursor-pointer">
+                            <SparkleIcon className="size-4 mr-1" />
+                            AI-Generated
+                          </DropdownMenuItem>
+                          <DropdownMenuItem className="cursor-pointer">
+                            <RotateCcwIcon className="size-4 mr-1" />
+                            Restore
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+
             <FormField
               control={form.control}
               name="categoryId"
