@@ -114,6 +114,19 @@ const FormSectionSuspense = ({ videoId }: Props) => {
     })
   );
 
+  const generateThumbnail = useMutation(
+    trpc.ai.generateThumbnail.mutationOptions({
+      onSuccess: () => {
+        toast.success("Background job started", {
+          description: "This may take some time",
+        });
+      },
+      onError: () => {
+        toast.error("Something went wrong");
+      },
+    })
+  );
+
   const restoreThumbnail = useMutation(
     trpc.videos.restoreThumbnail.mutationOptions({
       onSuccess: () => {
@@ -277,7 +290,11 @@ const FormSectionSuspense = ({ videoId }: Props) => {
                               <ImagePlusIcon className="size-4 mr-1" />
                               Change
                             </DropdownMenuItem>
-                            <DropdownMenuItem className="cursor-pointer">
+                            <DropdownMenuItem
+                              className="cursor-pointer"
+                              onClick={() => generateThumbnail.mutate({ videoId })}
+                              disabled={generateThumbnail.isPending}
+                            >
                               <SparkleIcon className="size-4 mr-1" />
                               AI-Generated
                             </DropdownMenuItem>
