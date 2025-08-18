@@ -7,6 +7,40 @@ import { TRPCError } from "@trpc/server";
 import z from "zod";
 
 export const videosRouter = createTRPCRouter({
+  restoreThumbnail: protectedProcedure
+    .input(
+      z.object({
+        videoId: z.uuid(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const { id: userId } = ctx.user;
+
+      const [video] = await db
+        .select()
+        .from(videos)
+        .where(and(eq(videos.id, input.videoId), eq(videos.userId, userId)));
+
+      if (!video) {
+        throw new TRPCError({ code: "NOT_FOUND" });
+      }
+
+      if (!video.muxPlaybackId) {
+        throw new TRPCError({ code: "NOT_FOUND" });
+      }
+
+      const thumbnailUrl = `https://image.mux.com/${video.muxPlaybackId}/thumbnail.jpg`;
+
+      const [updatedVideo] = await db
+        .update(videos)
+        .set({
+          thumbnailUrl: thumbnailUrl,
+        })
+        .where(and(eq(videos.id, video.id), eq(videos.userId, userId)))
+        .returning();
+        
+      return updatedVideo;
+    }),
   remove: protectedProcedure
     .input(
       z.object({
