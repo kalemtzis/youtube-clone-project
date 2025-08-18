@@ -286,6 +286,7 @@ const FormSectionSuspense = ({ videoId }: Props) => {
                               onClick={() =>
                                 restoreThumbnail.mutate({ videoId })
                               }
+                              disabled={restoreThumbnail.isPending}
                             >
                               <RotateCcwIcon className="size-4 mr-1" />
                               Restore
