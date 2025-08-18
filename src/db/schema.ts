@@ -8,6 +8,11 @@ import {
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
+import {
+  createInsertSchema,
+  createSelectSchema,
+  createUpdateSchema,
+} from "drizzle-zod";
 
 export const users = pgTable(
   "users",
@@ -61,7 +66,7 @@ export const videos = pgTable("videos", {
   thumbnailUrl: text("thumbnail_url"),
   previewUrl: text("preview_url"),
   duration: integer("duration").default(0).notNull(),
-  visibility: videoVisibility('visibility').default('private').notNull(),
+  visibility: videoVisibility("visibility").default("private").notNull(),
   userId: uuid("user_id")
     .references(() => users.id, {
       onDelete: "cascade",
@@ -73,6 +78,10 @@ export const videos = pgTable("videos", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
+
+export const videoInsertSchema = createInsertSchema(videos);
+export const videoUpdateSchema = createUpdateSchema(videos);
+export const videoSelectSchema = createSelectSchema(videos);
 
 export const videoRelations = relations(videos, ({ one }) => ({
   user: one(users, {
