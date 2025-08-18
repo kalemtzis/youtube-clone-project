@@ -42,12 +42,24 @@ export const videosRouter = createTRPCRouter({
         throw new TRPCError({ code: "NOT_FOUND" });
       }
 
-      const thumbnailUrl = `https://image.mux.com/${video.muxPlaybackId}/thumbnail.jpg`;
+      const tempThumbnailUrl = `https://image.mux.com/${video.muxPlaybackId}/thumbnail.jpg`;
+
+      const uploadedThumbnail = await new UTApi().uploadFilesFromUrl(
+        tempThumbnailUrl
+      );
+
+      if (!uploadedThumbnail.data) {
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      }
+
+      const { key: thumbnailKey, ufsUrl: thumbnailUrl } =
+        uploadedThumbnail.data;
 
       const [updatedVideo] = await db
         .update(videos)
         .set({
-          thumbnailUrl: thumbnailUrl,
+          thumbnailUrl,
+          thumbnailKey,
         })
         .where(and(eq(videos.id, video.id), eq(videos.userId, userId)))
         .returning();
