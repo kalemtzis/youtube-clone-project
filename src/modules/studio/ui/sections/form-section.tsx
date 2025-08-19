@@ -19,10 +19,12 @@ import {
   CopyIcon,
   Globe2Icon,
   ImagePlusIcon,
+  LoaderCircleIcon,
   LockIcon,
   MoreVerticalIcon,
   RotateCcwIcon,
   SparkleIcon,
+  SparklesIcon,
   Trash,
 } from "lucide-react";
 import { useForm } from "react-hook-form";
@@ -50,7 +52,7 @@ import { CategorySelect } from "../../../categories/ui/components/category-selec
 import { toast } from "sonner";
 import { VideoPlayer } from "@/modules/videos/ui/components/video-player";
 import Link from "next/link";
-import { snakeCaseToTitle } from "@/lib/utils";
+import { cn, snakeCaseToTitle } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { THUMBNAIL_FALLBACK } from "@/constants";
@@ -116,10 +118,59 @@ const FormSectionSuspense = ({ videoId }: Props) => {
 
   const generateThumbnail = useMutation(
     trpc.ai.generateThumbnail.mutationOptions({
-      onSuccess: () => {
-        toast.success("Background job started", {
+      onMutate: () => {
+        toast.success("Genaration started", {
           description: "This may take some time",
         });
+      },
+      onSuccess: () => {
+        queryClient.invalidateQueries(trpc.studio.getMany.queryFilter());
+        queryClient.invalidateQueries(
+          trpc.studio.getOne.queryOptions({ videoId })
+        );
+        toast.success("Thumbnail created!");
+      },
+      onError: () => {
+        toast.error("Something went wrong");
+      },
+    })
+  );
+
+  const generateTitle = useMutation(
+    trpc.ai.generateTitle.mutationOptions({
+      onMutate: () => {
+        toast.message("Genaration started", {
+          description: "This may take some time",
+        });
+      },
+      onSuccess: () => {
+        queryClient.invalidateQueries(trpc.studio.getMany.queryFilter());
+        queryClient.invalidateQueries(
+          trpc.studio.getOne.queryOptions({ videoId })
+        );
+        form.reset();
+        toast.success("Title created!");
+      },
+      onError: () => {
+        toast.error("Something went wrong");
+      },
+    })
+  );
+
+  const generateDescription = useMutation(
+    trpc.ai.generateDescription.mutationOptions({
+      onMutate: () => {
+        toast.message("Genaration started", {
+          description: "This may take some time",
+        });
+      },
+      onSuccess: () => {
+        toast.success("Description created!");
+        queryClient.invalidateQueries(trpc.studio.getMany.queryFilter());
+        queryClient.invalidateQueries(
+          trpc.studio.getOne.queryOptions({ videoId })
+        );
+        form.reset();
       },
       onError: () => {
         toast.error("Something went wrong");
@@ -221,9 +272,32 @@ const FormSectionSuspense = ({ videoId }: Props) => {
                 name="title"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>
+                    <FormLabel
+                      className={cn(
+                        "flex items-center cursor-pointer transition-opacity",
+                        (generateTitle.isPending || !video.muxTrackId) &&
+                          "opacity-70 pointer-events-none cursor-not-allowed"
+                      )}
+                      onClick={() => generateTitle.mutate({ videoId })}
+                    >
                       Title
-                      {/* TODO: add ai generate button */}
+                      <Button
+                        variant="outline"
+                        type="button"
+                        className="rounded-full cursor-pointer"
+                        disabled={generateTitle.isPending || !video.muxTrackId}
+                      >
+                        {generateTitle.isPending ? (
+                          <LoaderCircleIcon className="animate-spin" />
+                        ) : (
+                          <SparklesIcon />
+                        )}
+                        <span className="text-xs text-muted-foreground">
+                          {generateTitle.isPending
+                            ? "Generating..."
+                            : "Generate"}
+                        </span>
+                      </Button>
                     </FormLabel>
                     <FormControl>
                       <Input
@@ -240,9 +314,34 @@ const FormSectionSuspense = ({ videoId }: Props) => {
                 name="description"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>
+                    <FormLabel
+                      className={cn(
+                        "flex items-center cursor-pointer transition-opacity",
+                        (generateDescription.isPending || !video.muxTrackId) &&
+                          "opacity-70 pointer-events-none cursor-not-allowed"
+                      )}
+                      onClick={() => generateDescription.mutate({ videoId })}
+                    >
                       Description
-                      {/* TODO: add ai generate button */}
+                      <Button
+                        variant="outline"
+                        type="button"
+                        className="rounded-full cursor-pointer"
+                        disabled={
+                          generateDescription.isPending || !video.muxTrackId
+                        }
+                      >
+                        {generateDescription.isPending ? (
+                          <LoaderCircleIcon className="animate-spin" />
+                        ) : (
+                          <SparklesIcon />
+                        )}
+                        <span className="text-xs text-muted-foreground">
+                          {generateDescription.isPending
+                            ? "Generating..."
+                            : "Generate"}
+                        </span>
+                      </Button>
                     </FormLabel>
                     <FormControl>
                       <Textarea
@@ -292,7 +391,9 @@ const FormSectionSuspense = ({ videoId }: Props) => {
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               className="cursor-pointer"
-                              onClick={() => generateThumbnail.mutate({ videoId })}
+                              onClick={() =>
+                                generateThumbnail.mutate({ videoId })
+                              }
                               disabled={generateThumbnail.isPending}
                             >
                               <SparkleIcon className="size-4 mr-1" />
