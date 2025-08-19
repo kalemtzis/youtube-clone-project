@@ -1,13 +1,41 @@
 import { db } from "@/db";
-import { createTRPCRouter, protectedProcedure } from "@/trpc/init";
-import { videos, videoUpdateSchema } from "../../../db/schema";
+import {
+  baseProcedure,
+  createTRPCRouter,
+  protectedProcedure,
+} from "@/trpc/init";
+import { users, videos, videoUpdateSchema } from "../../../db/schema";
 import { mux } from "@/lib/mux";
-import { and, eq } from "drizzle-orm";
+import { and, eq, getTableColumns } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import z from "zod";
 import { UTApi } from "uploadthing/server";
 
 export const videosRouter = createTRPCRouter({
+  getOne: baseProcedure
+    .input(
+      z.object({
+        videoId: z.uuid(),
+      })
+    )
+    .query(async ({ input }) => {
+      const [video] = await db
+        .select({
+          ...getTableColumns(videos),
+          author: {
+            ...getTableColumns(users),
+          },
+        })
+        .from(videos)
+        .innerJoin(users, eq(users.id, videos.userId))
+        .where(eq(videos.id, input.videoId));
+
+      if (!video) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Video not found" });
+      }
+
+      return video;
+    }),
   restoreThumbnail: protectedProcedure
     .input(
       z.object({
