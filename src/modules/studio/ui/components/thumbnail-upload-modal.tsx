@@ -3,7 +3,7 @@
 import { ResponsiveModal } from "@/components/responsive-modal";
 import { UploadDropzone } from "@/lib/uploadthing";
 import { useTRPC } from "@/trpc/client";
-import { useQueryClient, useMutation } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 interface Props {

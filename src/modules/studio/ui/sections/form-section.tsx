@@ -57,6 +57,7 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { THUMBNAIL_FALLBACK } from "@/constants";
 import { ThumbnailUploadModal } from "../components/thumbnail-upload-modal";
+import { ThumbnailGenerateModal } from "../components/thumbnail-generate-modal copy";
 
 interface Props {
   videoId: string;
@@ -80,6 +81,8 @@ const FormSectionSuspense = ({ videoId }: Props) => {
   const router = useRouter();
   const [isCopied, setIsCopied] = useState(false);
   const [thumbnailModalOpen, setThumbnailModalOpen] = useState(false);
+  const [thumbnailGenerateModalOpen, setThumbnailGenerateModalOpen] =
+    useState(false);
 
   const trpc = useTRPC();
   const queryClient = useQueryClient();
@@ -109,26 +112,6 @@ const FormSectionSuspense = ({ videoId }: Props) => {
         queryClient.invalidateQueries(trpc.studio.getMany.queryFilter());
         toast.success("Video deleted!");
         router.push("/studio");
-      },
-      onError: () => {
-        toast.error("Something went wrong");
-      },
-    })
-  );
-
-  const generateThumbnail = useMutation(
-    trpc.ai.generateThumbnail.mutationOptions({
-      onMutate: () => {
-        toast.success("Genaration started", {
-          description: "This may take some time",
-        });
-      },
-      onSuccess: () => {
-        queryClient.invalidateQueries(trpc.studio.getMany.queryFilter());
-        queryClient.invalidateQueries(
-          trpc.studio.getOne.queryOptions({ videoId })
-        );
-        toast.success("Thumbnail created!");
       },
       onError: () => {
         toast.error("Something went wrong");
@@ -221,6 +204,11 @@ const FormSectionSuspense = ({ videoId }: Props) => {
       <ThumbnailUploadModal
         open={thumbnailModalOpen}
         onOpenChange={setThumbnailModalOpen}
+        videoId={videoId}
+      />
+      <ThumbnailGenerateModal
+        open={thumbnailGenerateModalOpen}
+        onOpenChange={setThumbnailGenerateModalOpen}
         videoId={videoId}
       />
       <Form {...form}>
@@ -392,9 +380,8 @@ const FormSectionSuspense = ({ videoId }: Props) => {
                             <DropdownMenuItem
                               className="cursor-pointer"
                               onClick={() =>
-                                generateThumbnail.mutate({ videoId })
+                                setThumbnailGenerateModalOpen(true)
                               }
-                              disabled={generateThumbnail.isPending}
                             >
                               <SparkleIcon className="size-4 mr-1" />
                               AI-Generated

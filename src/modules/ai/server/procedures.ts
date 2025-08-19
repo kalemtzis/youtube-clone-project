@@ -5,6 +5,7 @@ import { openai } from "@/lib/openai";
 import { createTRPCRouter, protectedProcedure } from "@/trpc/init";
 import { TRPCError } from "@trpc/server";
 import { and, eq } from "drizzle-orm";
+import { UTApi } from "uploadthing/server";
 import z from "zod";
 
 export const aiRouter = createTRPCRouter({
@@ -12,9 +13,69 @@ export const aiRouter = createTRPCRouter({
     .input(
       z.object({
         videoId: z.uuid(),
+        prompt: z.string(),
       })
     )
-    .mutation(async ({ ctx, input }) => {}),
+    .mutation(async ({ ctx, input }) => {
+      const [video] = await db
+        .select()
+        .from(videos)
+        .where(
+          and(eq(videos.id, input.videoId), eq(videos.userId, ctx.user.id))
+        );
+
+      if (!video) {
+        throw new TRPCError({ code: "NOT_FOUND" });
+      }
+
+      const res = (await openai.images.generate({
+        model: "dall-e-3",
+        n: 1,
+        size: "1792x1024",
+        prompt: input.prompt,
+        response_format: "url",
+        quality: "standard",
+      })) as { data: { url: string }[] };
+
+      const tempThumbnailUrl = res.data[0].url;
+
+      if (!tempThumbnailUrl) {
+        throw new TRPCError({ code: "BAD_REQUEST" });
+      }
+
+      const utapi = new UTApi();
+
+      const { data, error } = await utapi.uploadFilesFromUrl(tempThumbnailUrl);
+
+      if (error) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: error.message });
+      }
+
+      if (video.thumbnailKey) {
+        await utapi.deleteFiles(video.thumbnailKey);
+        await db
+          .update(videos)
+          .set({
+            thumbnailKey: null,
+            thumbnailUrl: null,
+          })
+          .where(
+            and(eq(videos.id, input.videoId), eq(videos.userId, ctx.user.id))
+          );
+      }
+
+      const [updatedVideo] = await db
+        .update(videos)
+        .set({
+          thumbnailKey: data.key,
+          thumbnailUrl: data.ufsUrl,
+        })
+        .where(
+          and(eq(videos.id, input.videoId), eq(videos.userId, ctx.user.id))
+        ).returning();
+
+      return updatedVideo;
+    }),
   generateDescription: protectedProcedure
     .input(
       z.object({
