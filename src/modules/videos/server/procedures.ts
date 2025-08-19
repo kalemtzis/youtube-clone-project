@@ -4,7 +4,12 @@ import {
   createTRPCRouter,
   protectedProcedure,
 } from "@/trpc/init";
-import { users, videos, videoUpdateSchema } from "../../../db/schema";
+import {
+  users,
+  videos,
+  videoUpdateSchema,
+  videoViews,
+} from "../../../db/schema";
 import { mux } from "@/lib/mux";
 import { and, eq, getTableColumns } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
@@ -25,6 +30,7 @@ export const videosRouter = createTRPCRouter({
           author: {
             ...getTableColumns(users),
           },
+          videoCount: db.$count(videoViews, eq(videoViews.videoId, videos.id)),
         })
         .from(videos)
         .innerJoin(users, eq(users.id, videos.userId))

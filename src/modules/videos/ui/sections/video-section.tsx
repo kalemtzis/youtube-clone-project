@@ -2,12 +2,18 @@
 
 import { cn } from "@/lib/utils";
 import { useTRPC } from "@/trpc/client";
-import { useSuspenseQuery } from "@tanstack/react-query";
+import {
+  useMutation,
+  useQueryClient,
+  useSuspenseQuery,
+} from "@tanstack/react-query";
 import { Suspense } from "react";
 import { ErrorBoundary } from "react-error-boundary";
 import { VideoPlayer } from "../components/video-player";
 import { VideoBanner } from "../components/video-banner";
 import { VideoTopRow } from "../components/video-top-row";
+import { useAuth } from "@clerk/nextjs";
+import { toast } from "sonner";
 
 interface Props {
   videoId: string;
@@ -28,10 +34,33 @@ const VideoSectionSkeleton = () => {
 };
 
 const VideoSectionSuspense = ({ videoId }: Props) => {
+  const { isSignedIn } = useAuth();
+
   const trpc = useTRPC();
+  const queryClient = useQueryClient();
+
   const { data: video } = useSuspenseQuery(
     trpc.videos.getOne.queryOptions({ videoId })
   );
+
+  const createView = useMutation(
+    trpc.videoViews.create.mutationOptions({
+      onSuccess: () => {
+        queryClient.invalidateQueries(
+          trpc.videos.getOne.queryOptions({ videoId })
+        );
+      },
+      onError: () => {
+        toast.error("Something went wrong!");
+      },
+    })
+  );
+
+  const handlePlay = () => {
+    if (!isSignedIn) return;
+
+    createView.mutate({ videoId });
+  };
 
   return (
     <>
@@ -43,7 +72,7 @@ const VideoSectionSuspense = ({ videoId }: Props) => {
       >
         <VideoPlayer
           autoPlay
-          onPlay={() => {}}
+          onPlay={handlePlay}
           playbackId={video.muxPlaybackId}
           thumbnailUrl={video.thumbnailUrl}
         />

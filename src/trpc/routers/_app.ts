@@ -3,12 +3,14 @@ import { createTRPCRouter } from "../init";
 import { categoriesRouter } from "@/modules/categories/server/procedures";
 import { videosRouter } from "@/modules/videos/server/procedures";
 import { aiRouter } from "@/modules/ai/server/procedures";
+import { videoViewsRouter } from "@/modules/video-views/servers/procedures";
 
 export const appRouter = createTRPCRouter({
   categories: categoriesRouter,
   studio: studioRouter,
   videos: videosRouter,
   ai: aiRouter,
+  videoViews: videoViewsRouter,
 });
 
 // export type definition of API

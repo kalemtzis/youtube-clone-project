@@ -16,13 +16,13 @@ export const VideoTopRow = ({ video }: Props) => {
   const compactViews = useMemo(() => {
     return Intl.NumberFormat("en", {
       notation: "compact",
-    }).format(1258);
-  }, []);
+    }).format(video.videoCount);
+  }, [video.videoCount]);
   const expandedViews = useMemo(() => {
     return Intl.NumberFormat("en", {
       notation: "standard",
-    }).format(1258);
-  }, []);
+    }).format(video.videoCount);
+  }, [video.videoCount]);
 
   const compactDate = useMemo(() => {
     return formatDistanceToNow(video.createdAt, { addSuffix: true });
