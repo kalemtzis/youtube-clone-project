@@ -22,12 +22,12 @@ export const videosRouter = createTRPCRouter({
       const [video] = await db
         .select({
           ...getTableColumns(videos),
-          users: {
+          author: {
             ...getTableColumns(users),
           },
         })
         .from(videos)
-        .innerJoin(users, eq(users.id, videos.id))
+        .innerJoin(users, eq(users.id, videos.userId))
         .where(eq(videos.id, input.videoId));
 
       if (!video) {
