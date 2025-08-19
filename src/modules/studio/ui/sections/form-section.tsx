@@ -143,12 +143,12 @@ const FormSectionSuspense = ({ videoId }: Props) => {
           description: "This may take some time",
         });
       },
-      onSuccess: () => {
+      onSuccess: (updatedVideo) => {
         queryClient.invalidateQueries(trpc.studio.getMany.queryFilter());
         queryClient.invalidateQueries(
           trpc.studio.getOne.queryOptions({ videoId })
         );
-        form.reset();
+        form.reset(updatedVideo);
         toast.success("Title created!");
       },
       onError: () => {
@@ -164,13 +164,13 @@ const FormSectionSuspense = ({ videoId }: Props) => {
           description: "This may take some time",
         });
       },
-      onSuccess: () => {
+      onSuccess: (updatedVideo) => {
         toast.success("Description created!");
         queryClient.invalidateQueries(trpc.studio.getMany.queryFilter());
         queryClient.invalidateQueries(
           trpc.studio.getOne.queryOptions({ videoId })
         );
-        form.reset();
+        form.reset(updatedVideo);
       },
       onError: () => {
         toast.error("Something went wrong");
