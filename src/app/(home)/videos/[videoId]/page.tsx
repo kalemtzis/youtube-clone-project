@@ -11,6 +11,10 @@ const Page = async ({ params }: Props) => {
 
   const queryClient = getQueryClient();
   void queryClient.prefetchQuery(trpc.videos.getOne.queryOptions({ videoId }));
+  // TODO: make it prefetchInfiniteQuery
+  void queryClient.prefetchQuery(
+    trpc.comments.getMany.queryOptions({ videoId })
+  );
 
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
