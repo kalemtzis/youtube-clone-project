@@ -9,9 +9,9 @@ import {
 } from "@tanstack/react-query";
 import { Suspense } from "react";
 import { ErrorBoundary } from "react-error-boundary";
-import { VideoPlayer } from "../components/video-player";
+import { VideoPlayer, VideoPlayerSkeleton } from "../components/video-player";
 import { VideoBanner } from "../components/video-banner";
-import { VideoTopRow } from "../components/video-top-row";
+import { VideoTopRow, VideoTopRowSkeleton } from "../components/video-top-row";
 import { useAuth } from "@clerk/nextjs";
 import { toast } from "sonner";
 
@@ -30,7 +30,12 @@ export const VideoSection = ({ videoId }: Props) => {
 };
 
 const VideoSectionSkeleton = () => {
-  return <div>Loading...</div>;
+  return (
+    <>
+      <VideoPlayerSkeleton />
+      <VideoTopRowSkeleton />
+    </>
+  );
 };
 
 const VideoSectionSuspense = ({ videoId }: Props) => {
