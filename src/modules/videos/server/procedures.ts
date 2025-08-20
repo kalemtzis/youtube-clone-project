@@ -5,6 +5,7 @@ import {
   protectedProcedure,
 } from "@/trpc/init";
 import {
+  subscriptions,
   users,
   videoReactions,
   videos,
@@ -12,7 +13,7 @@ import {
   videoViews,
 } from "../../../db/schema";
 import { mux } from "@/lib/mux";
-import { and, eq, getTableColumns, inArray } from "drizzle-orm";
+import { and, eq, getTableColumns, inArray, isNotNull } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import z from "zod";
 import { UTApi } from "uploadthing/server";
@@ -46,12 +47,26 @@ export const videosRouter = createTRPCRouter({
           .where(inArray(videoReactions.userId, userId ? [userId] : []))
       );
 
+      const viewerSubscriptions = db.$with("viewer_subscriptions").as(
+        db
+          .select()
+          .from(subscriptions)
+          .where(inArray(subscriptions.viewerId, userId ? [userId] : []))
+      );
+
       const [video] = await db
-        .with(viewerReactions)
+        .with(viewerReactions, viewerSubscriptions)
         .select({
           ...getTableColumns(videos),
           author: {
             ...getTableColumns(users),
+            viewerSubscribed: isNotNull(viewerSubscriptions.viewerId).mapWith(
+              Boolean
+            ),
+            subscriberCount: db.$count(
+              subscriptions,
+              eq(subscriptions.creatorId, users.id)
+            ),
           },
           videoCount: db.$count(videoViews, eq(videoViews.videoId, videos.id)),
           likeCount: db.$count(
@@ -73,8 +88,12 @@ export const videosRouter = createTRPCRouter({
         .from(videos)
         .innerJoin(users, eq(users.id, videos.userId))
         .leftJoin(viewerReactions, eq(viewerReactions.videoId, videos.id))
+        .leftJoin(
+          viewerSubscriptions,
+          eq(viewerSubscriptions.creatorId, users.id)
+        )
         .where(eq(videos.id, input.videoId))
-        // .groupBy(videos.id, users.id, viewerReactions.type);
+        .groupBy(videos.id, users.id, viewerReactions.type);
 
       if (!video) {
         throw new TRPCError({ code: "NOT_FOUND", message: "Video not found" });
