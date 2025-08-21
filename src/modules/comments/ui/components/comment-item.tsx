@@ -1,5 +1,4 @@
-"use client";
-
+"use client";;
 import Link from "next/link";
 import { CommentsGetManyOutput } from "../../types";
 import { UserAvatar } from "@/components/user-avatar";
@@ -7,7 +6,6 @@ import { formatDistanceToNow } from "date-fns";
 import { useTRPC } from "@/trpc/client";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { DEFAULT_LIMIT } from "@/constants";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,8 +13,15 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { MessageSquareIcon, MoreVerticalIcon, Trash2Icon } from "lucide-react";
+import {
+  MessageSquareIcon,
+  MoreVerticalIcon,
+  ThumbsDownIcon,
+  ThumbsUpIcon,
+  Trash2Icon,
+} from "lucide-react";
 import { useAuth, useClerk } from "@clerk/nextjs";
+import { cn } from "@/lib/utils";
 
 interface Props {
   comment: CommentsGetManyOutput["items"][number];
@@ -33,6 +38,38 @@ export const CommentItem = ({ comment }: Props) => {
     trpc.comments.remove.mutationOptions({
       onSuccess: () => {
         toast.success("Comment deleted!");
+        queryClient.invalidateQueries(
+          trpc.comments.getMany.infiniteQueryFilter({
+            videoId: comment.videoId,
+          })
+        );
+      },
+      onError: (error) => {
+        if (error.data?.code === "UNAUTHORIZED") clerk.openSignIn();
+        toast.error("Something went wrong");
+      },
+    })
+  );
+
+  const like = useMutation(
+    trpc.commentReactions.like.mutationOptions({
+      onSuccess: () => {
+        queryClient.invalidateQueries(
+          trpc.comments.getMany.infiniteQueryFilter({
+            videoId: comment.videoId,
+          })
+        );
+      },
+      onError: (error) => {
+        if (error.data?.code === "UNAUTHORIZED") clerk.openSignIn();
+        toast.error("Something went wrong");
+      },
+    })
+  );
+
+  const dislike = useMutation(
+    trpc.commentReactions.dislike.mutationOptions({
+      onSuccess: () => {
         queryClient.invalidateQueries(
           trpc.comments.getMany.infiniteQueryFilter({
             videoId: comment.videoId,
@@ -70,10 +107,46 @@ export const CommentItem = ({ comment }: Props) => {
 
           <p className="text-sm">{comment.value}</p>
 
-          {/* TODO: Reactions */}
+          <div className="flex items-center gap-2 mt-1">
+            <div className="flex items-center">
+              <Button
+                className="size-8"
+                size="icon"
+                variant="ghost"
+                onClick={() => like.mutate({ commentId: comment.id })}
+                disabled={like.isPending}
+              >
+                <ThumbsUpIcon
+                  className={cn(
+                    comment.viewerReaction === "like" && "fill-black"
+                  )}
+                />
+              </Button>
+              <span className="text-xs text-muted-foreground">
+                {comment.likeCount}
+              </span>
+
+              <Button
+                className="size-8"
+                size="icon"
+                variant="ghost"
+                onClick={() => dislike.mutate({ commentId: comment.id })}
+                disabled={dislike.isPending}
+              >
+                <ThumbsDownIcon
+                  className={cn(
+                    comment.viewerReaction === "dislike" && "fill-black"
+                  )}
+                />
+              </Button>
+              <span className="text-xs text-muted-foreground">
+                {comment.dislikeCount}
+              </span>
+            </div>
+          </div>
         </div>
 
-        <DropdownMenu>
+        <DropdownMenu modal={false}>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon" className="size-8">
               <MoreVerticalIcon />
