@@ -21,15 +21,25 @@ import z from "zod";
 
 interface Props {
   videoId: string;
+  parentId?: string;
   onSuccess?: () => void;
+  onCancel?: () => void;
+  varient?: "comment" | "reply";
 }
 
 const formSchema = z.object({
   videoId: z.uuid(),
-  value: z.string()
-})
+  parentId: z.uuid(),
+  value: z.string(),
+});
 
-export const CommentForm = ({ videoId, onSuccess }: Props) => {
+export const CommentForm = ({
+  videoId,
+  onSuccess,
+  onCancel,
+  parentId,
+  varient = "comment",
+}: Props) => {
   const { user } = useUser();
   const clerk = useClerk();
 
@@ -37,9 +47,10 @@ export const CommentForm = ({ videoId, onSuccess }: Props) => {
     resolver: zodResolver(formSchema),
     defaultValues: {
       videoId,
-      value: ""
-    }
-  })
+      parentId,
+      value: "",
+    },
+  });
 
   const trpc = useTRPC();
   const queryClient = useQueryClient();
@@ -49,7 +60,10 @@ export const CommentForm = ({ videoId, onSuccess }: Props) => {
       onSuccess: () => {
         form.reset();
         queryClient.invalidateQueries(
-          trpc.comments.getMany.queryOptions({ videoId })
+          trpc.comments.getMany.infiniteQueryFilter({ videoId })
+        );
+        queryClient.invalidateQueries(
+          trpc.comments.getMany.infiniteQueryFilter({ videoId, parentId })
         );
         toast.success("Comment added!");
         onSuccess?.();
@@ -62,8 +76,13 @@ export const CommentForm = ({ videoId, onSuccess }: Props) => {
   );
 
   const handleSubmit = (values: z.infer<typeof formSchema>) => {
-    createComment.mutate(values)
-  }
+    createComment.mutate(values);
+  };
+
+  const handleCancel = () => {
+    form.reset();
+    onCancel?.();
+  };
 
   return (
     <Form {...form}>
@@ -85,7 +104,11 @@ export const CommentForm = ({ videoId, onSuccess }: Props) => {
                 <FormControl>
                   <Textarea
                     {...field}
-                    placeholder="Add a comment..."
+                    placeholder={
+                      varient === "reply"
+                        ? "Reply to this comment..."
+                        : "Add a comment..."
+                    }
                     className="resize-none bg-transparent overflow-hidden min-h-0"
                   />
                 </FormControl>
@@ -95,8 +118,22 @@ export const CommentForm = ({ videoId, onSuccess }: Props) => {
           />
 
           <div className="justify-end gap-2 flex mt-2">
-            <Button type="submit" size="sm" className="cursor-pointer" disabled={createComment.isPending}>
-              {createComment.isPending ? <Loader2Icon className="animate-spin" /> :"Add comment" }
+            {onCancel && (
+              <Button variant="ghost" type="button" onClick={handleCancel}>
+                Cancel
+              </Button>
+            )}
+            <Button
+              type="submit"
+              size="sm"
+              className="cursor-pointer"
+              disabled={createComment.isPending}
+            >
+              {createComment.isPending ? (
+                <Loader2Icon className="animate-spin" />
+              ) : (
+                <>{varient === "reply" ? "Reply" : "Add comment"}</>
+              )}
             </Button>
           </div>
         </div>
