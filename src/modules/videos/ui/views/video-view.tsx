@@ -7,7 +7,6 @@ interface Props {
 }
 
 export const VideoView = ({ videoId }: Props) => {
-
   return (
     <div className="flex flex-col max-w-[1700px] mx-auto pt-2.5 px-4 mb-10">
       <div className="flex flex-col lg:flex-row gap-6">
@@ -18,7 +17,7 @@ export const VideoView = ({ videoId }: Props) => {
             <SuggestionsSection />
           </div>
 
-          <CommentsSection />
+          <CommentsSection videoId={videoId} />
         </div>
 
         <div className="hidden xl:block w-full xl:w-[380px] 2xl:w-[460px] shrink-1">
@@ -26,5 +25,5 @@ export const VideoView = ({ videoId }: Props) => {
         </div>
       </div>
     </div>
-  )
+  );
 };
