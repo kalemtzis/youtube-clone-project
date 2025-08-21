@@ -34,8 +34,7 @@ export const studioRouter = createTRPCRouter({
             id: z.uuid(),
             updatedAt: z.date(),
           })
-          .nullable()
-          .default(null),
+          .nullish(),
         limit: z.number().min(1).max(100).default(1),
       })
     )
