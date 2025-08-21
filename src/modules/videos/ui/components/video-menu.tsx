@@ -20,7 +20,7 @@ interface Props {
 }
 
 // TODO: Add real data and functionality
-export const VideoMenu = ({ videoId, onRemove, variant }: Props) => {
+export const VideoMenu = ({ videoId, onRemove, variant = "ghost" }: Props) => {
   const onShare = () => {
     //const fullUrl = `${process.env.VERCEL_URL || "http://localhost:3000"}/videos/${videoId}`;
     const fullUrl = window.location.href;

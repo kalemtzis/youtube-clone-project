@@ -11,7 +11,15 @@ const Page = async ({ params }: Props) => {
   const { videoId } = await params;
 
   const queryClient = getQueryClient();
+
   void queryClient.prefetchQuery(trpc.videos.getOne.queryOptions({ videoId }));
+  
+  void queryClient.prefetchInfiniteQuery(
+    trpc.suggestions.getMany.infiniteQueryOptions({
+      videoId,
+      limit: DEFAULT_LIMIT,
+    })
+  );
 
   void queryClient.prefetchInfiniteQuery(
     trpc.comments.getMany.infiniteQueryOptions({
