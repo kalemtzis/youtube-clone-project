@@ -146,7 +146,9 @@ const FormSectionSuspense = ({ videoId }: Props) => {
   const update = useMutation(
     trpc.videos.update.mutationOptions({
       onSuccess: () => {
-        queryClient.invalidateQueries(trpc.studio.getMany.queryFilter());
+        queryClient.invalidateQueries(
+          trpc.studio.getMany.infiniteQueryFilter()
+        );
         queryClient.invalidateQueries(
           trpc.studio.getOne.queryOptions({ videoId })
         );
@@ -161,9 +163,28 @@ const FormSectionSuspense = ({ videoId }: Props) => {
   const remove = useMutation(
     trpc.videos.remove.mutationOptions({
       onSuccess: () => {
-        queryClient.invalidateQueries(trpc.studio.getMany.queryFilter());
+        queryClient.invalidateQueries(
+          trpc.studio.getMany.infiniteQueryFilter()
+        );
         toast.success("Video deleted!");
         router.push("/studio");
+      },
+      onError: () => {
+        toast.error("Something went wrong");
+      },
+    })
+  );
+
+  const revalidate = useMutation(
+    trpc.videos.revalidate.mutationOptions({
+      onSuccess: () => {
+        queryClient.invalidateQueries(
+          trpc.studio.getMany.infiniteQueryFilter()
+        );
+        queryClient.invalidateQueries(
+          trpc.studio.getOne.queryOptions({ videoId })
+        );
+        toast.success("Video updated!");
       },
       onError: () => {
         toast.error("Something went wrong");
@@ -179,7 +200,9 @@ const FormSectionSuspense = ({ videoId }: Props) => {
         });
       },
       onSuccess: (updatedVideo) => {
-        queryClient.invalidateQueries(trpc.studio.getMany.queryFilter());
+        queryClient.invalidateQueries(
+          trpc.studio.getMany.infiniteQueryFilter()
+        );
         queryClient.invalidateQueries(
           trpc.studio.getOne.queryOptions({ videoId })
         );
@@ -201,7 +224,9 @@ const FormSectionSuspense = ({ videoId }: Props) => {
       },
       onSuccess: (updatedVideo) => {
         toast.success("Description created!");
-        queryClient.invalidateQueries(trpc.studio.getMany.queryFilter());
+        queryClient.invalidateQueries(
+          trpc.studio.getMany.infiniteQueryFilter()
+        );
         queryClient.invalidateQueries(
           trpc.studio.getOne.queryOptions({ videoId })
         );
@@ -216,7 +241,9 @@ const FormSectionSuspense = ({ videoId }: Props) => {
   const restoreThumbnail = useMutation(
     trpc.videos.restoreThumbnail.mutationOptions({
       onSuccess: () => {
-        queryClient.invalidateQueries(trpc.studio.getMany.queryFilter());
+        queryClient.invalidateQueries(
+          trpc.studio.getMany.infiniteQueryFilter()
+        );
         queryClient.invalidateQueries(
           trpc.studio.getOne.queryOptions({ videoId })
         );
@@ -293,6 +320,14 @@ const FormSectionSuspense = ({ videoId }: Props) => {
                 </DropdownMenuTrigger>
 
                 <DropdownMenuContent align="end">
+                  <DropdownMenuItem
+                    className="cursor-pointer"
+                    onClick={() => revalidate.mutate({ videoId })}
+                  >
+                    <RotateCcwIcon className="size-4 mr-2" />
+                    Revalidate
+                  </DropdownMenuItem>
+
                   <DropdownMenuItem
                     className="cursor-pointer"
                     onClick={() => remove.mutate({ videoId })}
