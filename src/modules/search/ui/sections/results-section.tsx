@@ -1,7 +1,5 @@
-"use client";
-
+"use client";;
 import { DEFAULT_LIMIT } from "@/constants";
-import { useIsMobile } from "@/hooks/use-mobile";
 import { useTRPC } from "@/trpc/client";
 import { useSuspenseInfiniteQuery } from "@tanstack/react-query";
 import { Suspense } from "react";
@@ -55,7 +53,6 @@ const ResultsSectionSkeleton = () => {
 };
 
 const ResultsSectionSuspense = (props: Props) => {
-  const isMobile = useIsMobile();
   const trpc = useTRPC();
 
   const {
@@ -77,23 +74,22 @@ const ResultsSectionSuspense = (props: Props) => {
 
   return (
     <>
-      {isMobile ? (
-        <div className="flex flex-col gap-4 gap-y-10">
-          {results.pages
-            .flatMap((page) => page.items)
-            .map((result) => (
-              <VideoGridCard data={result} key={result.id} />
-            ))}
-        </div>
-      ) : (
-        <div className="flex flex-col gap-4">
-          {results.pages
-            .flatMap((page) => page.items)
-            .map((result) => (
-              <VideoRowCard data={result} key={result.id} />
-            ))}
-        </div>
-      )}
+      <div className="flex flex-col gap-4 gap-y-10 md:hidden">
+        {results.pages
+          .flatMap((page) => page.items)
+          .map((result) => (
+            <VideoGridCard data={result} key={result.id} />
+          ))}
+      </div>
+
+      <div className="hidden md:flex flex-col gap-4">
+        {results.pages
+          .flatMap((page) => page.items)
+          .map((result) => (
+            <VideoRowCard data={result} key={result.id} />
+          ))}
+      </div>
+
       <InfiniteScroll
         fetchNextPage={fetchNextPage}
         hasNextPage={hasNextPage}

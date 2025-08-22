@@ -26,6 +26,9 @@ export const useSubscription = ({
         toast.success("Subscribed");
 
         // TODO: reinvalidate subscriptions.getMany and users.getOne
+        queryClient.invalidateQueries(
+          trpc.videos.getSubscribed.infiniteQueryFilter()
+        );
 
         if (fromVideoId) {
           queryClient.invalidateQueries(

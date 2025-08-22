@@ -1,7 +1,7 @@
 import { DEFAULT_LIMIT } from "@/constants";
-import { SubscriptionsView } from "@/modules/home/ui/views/subscriptions-view";
+import { HistoryView } from "@/modules/playlists/ui/views/history-view";
 import { getQueryClient, trpc } from "@/trpc/server";
-import { dehydrate, HydrationBoundary } from "@tanstack/react-query";
+import { HydrationBoundary, dehydrate } from "@tanstack/react-query";
 
 export const dynamic = "force-dynamic";
 
@@ -9,14 +9,12 @@ const Page = () => {
   const queryClient = getQueryClient();
 
   void queryClient.prefetchInfiniteQuery(
-    trpc.videos.getSubscribed.infiniteQueryOptions({
-      limit: DEFAULT_LIMIT,
-    })
+    trpc.playlists.getHistory.infiniteQueryOptions({ limit: DEFAULT_LIMIT })
   );
 
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
-      <SubscriptionsView />
+      <HistoryView />
     </HydrationBoundary>
   );
 };
