@@ -264,9 +264,7 @@ const FormSectionSuspense = ({ videoId }: Props) => {
     update.mutate(values);
   };
 
-  const fullUrl = `${
-    process.env.VERCEL_URL || process.env.NEXT_PUBLIC_APP_URL
-  }/videos/${videoId} `;
+  const fullUrl = `${process.env.NEXT_PUBLIC_APP_URL}/videos/${videoId} `;
 
   const handleCopyUrl = async () => {
     await navigator.clipboard.writeText(fullUrl);
