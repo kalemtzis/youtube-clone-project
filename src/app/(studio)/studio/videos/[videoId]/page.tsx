@@ -10,7 +10,9 @@ interface Props {
 
 const Page = async ({ params }: Props) => {
   const { videoId } = await params;
+
   const queryClient = getQueryClient();
+  
   void queryClient.prefetchQuery(trpc.studio.getOne.queryOptions({ videoId }));
   void queryClient.prefetchQuery(trpc.categories.getMany.queryOptions());
 

@@ -232,7 +232,7 @@ export const videosRouter = createTRPCRouter({
                   lt(videos.updatedAt, cursor.updatedAt),
                   and(
                     eq(videos.updatedAt, cursor.updatedAt),
-                    eq(videos.id, cursor.id)
+                    lt(videos.id, cursor.id)
                   )
                 )
               : undefined
