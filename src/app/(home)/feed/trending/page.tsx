@@ -1,32 +1,22 @@
 import { DEFAULT_LIMIT } from "@/constants";
-import { HomeView } from "@/modules/home/ui/views/home-view";
+import { TrendingView } from "@/modules/home/ui/views/trending-view";
 import { getQueryClient, trpc } from "@/trpc/server";
 import { dehydrate, HydrationBoundary } from "@tanstack/react-query";
 
 export const dynamic = "force-dynamic";
 
-interface Props {
-  searchParams: Promise<{
-    categoryId?: string;
-  }>;
-}
-
-const Home = async ({ searchParams }: Props) => {
-  const { categoryId } = await searchParams;
-
+const Home = async () => {
   const queryClient = getQueryClient();
 
-  void queryClient.prefetchQuery(trpc.categories.getMany.queryOptions());
   void queryClient.prefetchInfiniteQuery(
-    trpc.videos.getMany.infiniteQueryOptions({
-      categoryId,
+    trpc.videos.getTrending.infiniteQueryOptions({
       limit: DEFAULT_LIMIT,
     })
   );
 
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
-      <HomeView categoryId={categoryId} />
+      <TrendingView />
     </HydrationBoundary>
   );
 };
