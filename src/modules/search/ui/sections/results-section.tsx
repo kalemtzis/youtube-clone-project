@@ -23,7 +23,10 @@ interface Props {
 
 export const ResultsSection = (props: Props) => {
   return (
-    <Suspense fallback={<ResultsSectionSkeleton />}>
+    <Suspense
+      key={`${props.query}-${props.categoryId}`}
+      fallback={<ResultsSectionSkeleton />}
+    >
       <ErrorBoundary fallback={<p>Error...</p>}>
         <ResultsSectionSuspense {...props} />
       </ErrorBoundary>
@@ -32,7 +35,23 @@ export const ResultsSection = (props: Props) => {
 };
 
 const ResultsSectionSkeleton = () => {
-  return <div>Loading...</div>;
+  return (
+    <div>
+      {/* Desktop */}
+      <div className="hidden flex-col gap-4 md:flex">
+        {Array.from({ length: 5 }).map((_, idx) => (
+          <VideoRowCardSkeleton key={idx} />
+        ))}
+      </div>
+
+      {/* Mobile */}
+      <div className="flex flex-col gap-4 p-4 gap-y-10 md:hidden pt-6">
+        {Array.from({ length: 3 }).map((_, idx) => (
+          <VideoGridCardSkeleton key={idx} />
+        ))}
+      </div>
+    </div>
+  );
 };
 
 const ResultsSectionSuspense = (props: Props) => {

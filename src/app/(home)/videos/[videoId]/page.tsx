@@ -3,6 +3,8 @@ import { VideoView } from "@/modules/videos/ui/views/video-view";
 import { getQueryClient, trpc } from "@/trpc/server";
 import { dehydrate, HydrationBoundary } from "@tanstack/react-query";
 
+export const dynamic = 'force-dynamic';
+
 interface Props {
   params: Promise<{ videoId: string }>;
 }

@@ -23,7 +23,7 @@ interface Props {
 export const VideoMenu = ({ videoId, onRemove, variant = "ghost" }: Props) => {
   const onShare = () => {
     //const fullUrl = `${process.env.VERCEL_URL || "http://localhost:3000"}/videos/${videoId}`;
-    const fullUrl = window.location.href;
+    const fullUrl = `${process.env.NEXT_PUBLIC_APP_URL}/videos/${videoId}`
     navigator.clipboard.writeText(fullUrl);
     toast.success("Link copied to the clipboard!")
   }
