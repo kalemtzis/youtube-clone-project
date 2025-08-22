@@ -26,7 +26,7 @@ export const MainSection = () => {
               <SidebarMenuButton
                 tooltip={item.title}
                 asChild
-                isActive={pathname === item.href} // TODO: Change to look at current pathname
+                isActive={pathname === item.href}
                 onClick={(e) => {
                   if (!isSignedIn && item.auth) {
                     e.preventDefault();

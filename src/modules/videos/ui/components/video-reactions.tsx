@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -27,19 +27,25 @@ export const VideoReactions = ({
   const queryClient = useQueryClient();
   const trpc = useTRPC();
 
-  const like = useMutation(trpc.videoReactions.like.mutationOptions({
-    onError: (error) => {
-      toast.error("Something went wrong");
+  const like = useMutation(
+    trpc.videoReactions.like.mutationOptions({
+      onError: (error) => {
+        toast.error("Something went wrong");
 
-      if (error.data?.code === "UNAUTHORIZED") {
-        clerk.openSignIn();
-      }
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries(trpc.videos.getOne.queryOptions({ videoId }));
-      // TODO: Invalidate "liked" playlist
-    }
-  }));
+        if (error.data?.code === "UNAUTHORIZED") {
+          clerk.openSignIn();
+        }
+      },
+      onSuccess: () => {
+        queryClient.invalidateQueries(
+          trpc.videos.getOne.queryOptions({ videoId })
+        );
+        queryClient.invalidateQueries(
+          trpc.playlists.getLikedVideos.infiniteQueryFilter()
+        );
+      },
+    })
+  );
 
   const dislike = useMutation(
     trpc.videoReactions.dislike.mutationOptions({
@@ -54,7 +60,9 @@ export const VideoReactions = ({
         queryClient.invalidateQueries(
           trpc.videos.getOne.queryOptions({ videoId })
         );
-        // TODO: Invalidate "liked" playlist
+        queryClient.invalidateQueries(
+          trpc.playlists.getLikedVideos.infiniteQueryFilter()
+        );
       },
     })
   );
