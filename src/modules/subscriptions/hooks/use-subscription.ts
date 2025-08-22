@@ -48,6 +48,9 @@ export const useSubscription = ({
         toast.success("Unsubscribed");
 
         // TODO: reinvalidate subscriptions.getMany and users.getOne
+        queryClient.invalidateQueries(
+          trpc.videos.getSubscribed.infiniteQueryFilter()
+        );
 
         if (fromVideoId) {
           queryClient.invalidateQueries(
