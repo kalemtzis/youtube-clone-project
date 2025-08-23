@@ -25,7 +25,10 @@ export const useSubscription = ({
       onSuccess: () => {
         toast.success("Subscribed");
 
-        // TODO: reinvalidate subscriptions.getMany
+        queryClient.invalidateQueries(
+          trpc.subscriptions.getMany.infiniteQueryFilter()
+        );
+
         queryClient.invalidateQueries(
           trpc.users.getOne.queryOptions({ userId })
         );
@@ -53,7 +56,9 @@ export const useSubscription = ({
       onSuccess: () => {
         toast.success("Unsubscribed");
 
-        // TODO: reinvalidate subscriptions.getMany
+        queryClient.invalidateQueries(
+          trpc.subscriptions.getMany.infiniteQueryFilter()
+        );
         queryClient.invalidateQueries(
           trpc.users.getOne.queryOptions({ userId })
         );
