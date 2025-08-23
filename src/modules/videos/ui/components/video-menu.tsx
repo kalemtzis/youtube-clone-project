@@ -1,3 +1,5 @@
+"use client";
+
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -5,12 +7,16 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { PlaylistAddModal } from "@/modules/playlists/ui/components/playlist-add-video-modal";
+import { useTRPC } from "@/trpc/client";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   ListPlusIcon,
   MoreVerticalIcon,
   ShareIcon,
   Trash2Icon,
 } from "lucide-react";
+import { useState } from "react";
 import { toast } from "sonner";
 
 interface Props {
@@ -19,38 +25,54 @@ interface Props {
   onRemove?: () => void;
 }
 
-// TODO: Add real data and functionality
 export const VideoMenu = ({ videoId, onRemove, variant = "ghost" }: Props) => {
+  const [isOpen, setIsOpen] = useState(false);
+
+  const trpc = useTRPC();
+  const queryClient = useQueryClient();
+
+  const addVideo = useMutation(trpc.playlists.addVideo.mutationOptions());
+
+  const removeVideo = useMutation(trpc.playlists.removeVideo.mutationOptions());
+
   const onShare = () => {
     //const fullUrl = `${process.env.VERCEL_URL || "http://localhost:3000"}/videos/${videoId}`;
-    const fullUrl = `${process.env.NEXT_PUBLIC_APP_URL}/videos/${videoId}`
+    const fullUrl = `${process.env.NEXT_PUBLIC_APP_URL}/videos/${videoId}`;
     navigator.clipboard.writeText(fullUrl);
-    toast.success("Link copied to the clipboard!")
-  }
+    toast.success("Link copied to the clipboard!");
+  };
 
   return (
-    <DropdownMenu modal={false}>
-      <DropdownMenuTrigger asChild>
-        <Button variant={variant} size="icon" className="rounded-full">
-          <MoreVerticalIcon />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-        <DropdownMenuItem onClick={onShare}>
-          <ShareIcon className="mr-2 size-4" />
-          Share
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => {}}>
-          <ListPlusIcon className="mr-2 size-4" />
-          Add to playlist
-        </DropdownMenuItem>
-        {onRemove && (
-          <DropdownMenuItem onClick={() => {}}>
-            <Trash2Icon className="mr-2 size-4" />
-            Remove
+    <>
+      <PlaylistAddModal 
+        videoId={videoId}
+        open={isOpen} 
+        onOpenChange={setIsOpen} 
+      />
+
+      <DropdownMenu modal={false}>
+        <DropdownMenuTrigger asChild>
+          <Button variant={variant} size="icon" className="rounded-full">
+            <MoreVerticalIcon />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+          <DropdownMenuItem onClick={onShare}>
+            <ShareIcon className="mr-2 size-4" />
+            Share
           </DropdownMenuItem>
-        )}
-      </DropdownMenuContent>
-    </DropdownMenu>
+          <DropdownMenuItem onClick={() => setIsOpen(true)}>
+            <ListPlusIcon className="mr-2 size-4" />
+            Add to playlist
+          </DropdownMenuItem>
+          {onRemove && (
+            <DropdownMenuItem onClick={() => {}}>
+              <Trash2Icon className="mr-2 size-4" />
+              Remove
+            </DropdownMenuItem>
+          )}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </>
   );
 };

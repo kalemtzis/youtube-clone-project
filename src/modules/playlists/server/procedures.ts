@@ -8,11 +8,78 @@ import {
   videos,
   videoViews,
 } from "../../../db/schema";
-import { and, count, desc, eq, getTableColumns, lt, or } from "drizzle-orm";
+import { and, desc, eq, getTableColumns, lt, or, sql } from "drizzle-orm";
 import z from "zod";
 import { TRPCError } from "@trpc/server";
 
 export const playlistsRouter = createTRPCRouter({
+  getManyForVideo: protectedProcedure
+    .input(
+      z.object({
+        videoId: z.uuid(),
+        cursor: z
+          .object({
+            id: z.string(),
+            updatedAt: z.date(),
+          })
+          .nullish(),
+        limit: z.number().min(1).max(100),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      const userId = ctx.user.id;
+      const { cursor, limit, videoId } = input;
+
+      const data = await db
+        .select({
+          ...getTableColumns(playlists),
+          user: users,
+          videosCount: db.$count(
+            playlistVideos,
+            eq(playlistVideos.playlistId, playlists.id)
+          ),
+          containsVideo: videoId
+            ? sql<boolean>`(select exists (
+            select 1 from ${playlistVideos} pv 
+            where pv.playlist_id = ${playlists.id}
+            and pv.video_id = ${videoId}
+          ))`
+            : sql<boolean>`false`,
+        })
+        .from(playlists)
+        .innerJoin(users, eq(users.id, playlists.userId))
+        .where(
+          and(
+            eq(playlists.userId, userId),
+            cursor
+              ? or(
+                  lt(playlists.updatedAt, cursor.updatedAt),
+                  and(
+                    eq(playlists.updatedAt, cursor.updatedAt),
+                    lt(playlists.id, cursor.id)
+                  )
+                )
+              : undefined
+          )
+        )
+        .orderBy(desc(playlists.updatedAt), desc(playlists.id))
+        .limit(limit + 1);
+
+      const hasMore = data.length > limit;
+      const items = hasMore ? data.slice(0, -1) : data;
+      const lastItem = items[items.length - 1];
+      const nextCursor = hasMore
+        ? {
+            id: lastItem.id,
+            updatedAt: lastItem.updatedAt,
+          }
+        : null;
+
+      return {
+        items,
+        nextCursor,
+      };
+    }),
   getOne: protectedProcedure
     .input(
       z.object({
@@ -41,7 +108,7 @@ export const playlistsRouter = createTRPCRouter({
 
       return playlist;
     }),
-  // ! TODO: add information about number of videos in the playlist and maybe a thumbnail from the first video in the playlist
+  // ! TODO: add information about number of videos in the playlist and maybe a thumbnail from the first video in the playlist (populate)
   getMany: protectedProcedure
     .input(
       z.object({
@@ -121,10 +188,32 @@ export const playlistsRouter = createTRPCRouter({
 
       if (!playlist) {
         throw new TRPCError({
-          code: "FORBIDDEN",
-          message:
-            "You do not have permission to remove videos from this playlist",
+          code: "NOT_FOUND",
+          message: "Playlist not found",
         });
+      }
+
+      const [video] = await db
+        .select()
+        .from(videos)
+        .where(eq(videos.id, videoId));
+
+      if (!video) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Video not found" });
+      }
+
+      const [existingPlaylistVideo] = await db
+        .select()
+        .from(playlistVideos)
+        .where(
+          and(
+            eq(playlistVideos.videoId, video.id),
+            eq(playlistVideos.playlistId, playlistId)
+          )
+        );
+
+      if (!existingPlaylistVideo) {
+        throw new TRPCError({ code: "NOT_FOUND" });
       }
 
       const [deletedVideo] = await db
@@ -182,20 +271,41 @@ export const playlistsRouter = createTRPCRouter({
       const userId = ctx.user.id;
 
       const [playlist] = await db
-        .select({
-          playlistUserId: playlists.userId,
-        })
+        .select()
         .from(playlists)
         .where(and(eq(playlists.id, playlistId), eq(playlists.userId, userId)));
 
       if (!playlist) {
         throw new TRPCError({
-          code: "FORBIDDEN",
-          message: "You do not have permission to add videos to this playlist",
+          code: "NOT_FOUND",
+          message: "Playlist not found",
         });
       }
 
-      const [addedVideo] = await db
+      const [video] = await db
+        .select()
+        .from(videos)
+        .where(eq(videos.id, videoId));
+
+      if (!video) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Video not found" });
+      }
+
+      const [existingPlaylistVideo] = await db
+        .select()
+        .from(playlistVideos)
+        .where(
+          and(
+            eq(playlistVideos.videoId, video.id),
+            eq(playlistVideos.playlistId, playlist.id)
+          )
+        );
+
+      if (existingPlaylistVideo) {
+        throw new TRPCError({ code: "CONFLICT" });
+      }
+
+      const [createdPlaylistVideo] = await db
         .insert(playlistVideos)
         .values({
           playlistId,
@@ -203,14 +313,14 @@ export const playlistsRouter = createTRPCRouter({
         })
         .returning();
 
-      if (!addedVideo) {
+      if (!createdPlaylistVideo) {
         throw new TRPCError({
           code: "BAD_REQUEST",
           message: "Could not add video to playlist",
         });
       }
 
-      return addedVideo;
+      return createdPlaylistVideo;
     }),
   create: protectedProcedure
     .input(
