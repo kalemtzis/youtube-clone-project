@@ -1,10 +1,246 @@
 import { db } from "@/db";
 import { createTRPCRouter, protectedProcedure } from "@/trpc/init";
-import { users, videoReactions, videos, videoViews } from "../../../db/schema";
+import {
+  playlists,
+  playlistVideos,
+  users,
+  videoReactions,
+  videos,
+  videoViews,
+} from "../../../db/schema";
 import { and, count, desc, eq, getTableColumns, lt, or } from "drizzle-orm";
 import z from "zod";
+import { TRPCError } from "@trpc/server";
 
 export const playlistsRouter = createTRPCRouter({
+  getOne: protectedProcedure
+    .input(
+      z.object({
+        playlistId: z.uuid(),
+      })
+    )
+    .query(async ({ input, ctx }) => {
+      const userId = ctx.user.id;
+      const { playlistId } = input;
+
+      const [playlist] = await db
+        .select({
+          ...getTableColumns(playlists),
+          user: users,
+        })
+        .from(playlists)
+        .innerJoin(users, eq(users.id, playlists.userId))
+        .where(and(eq(playlists.id, playlistId), eq(playlists.userId, userId)));
+
+      if (!playlist) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Playlist not found",
+        });
+      }
+
+      return playlist;
+    }),
+  // ! TODO: add information about number of videos in the playlist and maybe a thumbnail from the first video in the playlist
+  getMany: protectedProcedure
+    .input(
+      z.object({
+        cursor: z
+          .object({
+            id: z.string(),
+            updatedAt: z.date(),
+          })
+          .nullish(),
+        limit: z.number().min(1).max(100),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      const userId = ctx.user.id;
+      const { cursor, limit } = input;
+
+      const data = await db
+        .select({
+          ...getTableColumns(playlists),
+          user: users,
+          videosCount: db.$count(
+            playlistVideos,
+            eq(playlistVideos.playlistId, playlists.id)
+          ),
+        })
+        .from(playlists)
+        .innerJoin(users, eq(users.id, playlists.userId))
+        .where(
+          and(
+            eq(playlists.userId, userId),
+            cursor
+              ? or(
+                  lt(playlists.updatedAt, cursor.updatedAt),
+                  and(
+                    eq(playlists.updatedAt, cursor.updatedAt),
+                    lt(playlists.id, cursor.id)
+                  )
+                )
+              : undefined
+          )
+        )
+        .orderBy(desc(playlists.updatedAt), desc(playlists.id))
+        .limit(limit + 1);
+
+      const hasMore = data.length > limit;
+      const items = hasMore ? data.slice(0, -1) : data;
+      const lastItem = items[items.length - 1];
+      const nextCursor = hasMore
+        ? {
+            id: lastItem.id,
+            updatedAt: lastItem.updatedAt,
+          }
+        : null;
+
+      return {
+        items,
+        nextCursor,
+      };
+    }),
+  removeVideo: protectedProcedure
+    .input(
+      z.object({
+        playlistId: z.uuid(),
+        videoId: z.uuid(),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      const userId = ctx.user.id;
+      const { playlistId, videoId } = input;
+
+      const [playlist] = await db
+        .select({
+          playlistUserId: playlists.userId,
+        })
+        .from(playlists)
+        .where(and(eq(playlists.id, playlistId), eq(playlists.userId, userId)));
+
+      if (!playlist) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message:
+            "You do not have permission to remove videos from this playlist",
+        });
+      }
+
+      const [deletedVideo] = await db
+        .delete(playlistVideos)
+        .where(
+          and(
+            eq(playlistVideos.playlistId, playlistId),
+            eq(playlistVideos.videoId, videoId)
+          )
+        )
+        .returning();
+
+      if (!deletedVideo) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Could not remove video from playlist",
+        });
+      }
+
+      return deletedVideo;
+    }),
+  remove: protectedProcedure
+    .input(
+      z.object({
+        playlistId: z.uuid(),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      const userId = ctx.user.id;
+      const { playlistId } = input;
+
+      const [deletedPlaylist] = await db
+        .delete(playlists)
+        .where(and(eq(playlists.id, playlistId), eq(playlists.userId, userId)))
+        .returning();
+
+      if (!deletedPlaylist) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Could not delete playlist",
+        });
+      }
+
+      return deletedPlaylist;
+    }),
+  addVideo: protectedProcedure
+    .input(
+      z.object({
+        playlistId: z.uuid(),
+        videoId: z.uuid(),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      const { playlistId, videoId } = input;
+      const userId = ctx.user.id;
+
+      const [playlist] = await db
+        .select({
+          playlistUserId: playlists.userId,
+        })
+        .from(playlists)
+        .where(and(eq(playlists.id, playlistId), eq(playlists.userId, userId)));
+
+      if (!playlist) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "You do not have permission to add videos to this playlist",
+        });
+      }
+
+      const [addedVideo] = await db
+        .insert(playlistVideos)
+        .values({
+          playlistId,
+          videoId,
+        })
+        .returning();
+
+      if (!addedVideo) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Could not add video to playlist",
+        });
+      }
+
+      return addedVideo;
+    }),
+  create: protectedProcedure
+    .input(
+      z.object({
+        name: z.string().min(1),
+        description: z.string().max(300),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.user.id;
+      const { name, description } = input;
+
+      const [createdPlaylist] = await db
+        .insert(playlists)
+        .values({
+          name: name,
+          description,
+          userId,
+        })
+        .returning();
+
+      if (!createdPlaylist) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Could not create playlist",
+        });
+      }
+
+      return createdPlaylist;
+    }),
   getLikedVideos: protectedProcedure
     .input(
       z.object({
@@ -80,20 +316,20 @@ export const playlistsRouter = createTRPCRouter({
         .orderBy(desc(viewerVideoReactions.likedAt), desc(videos.id))
         .limit(limit + 1);
 
-        const hasMore = data.length > limit;
-        const items = hasMore ? data.slice(0, -1) : data;
-        const lastItem = items[items.length - 1];
-        const nextCursor = hasMore
-          ? {
-              id: lastItem.id,
-              likedAt: lastItem.likedAt,
-            }
-          : null;
+      const hasMore = data.length > limit;
+      const items = hasMore ? data.slice(0, -1) : data;
+      const lastItem = items[items.length - 1];
+      const nextCursor = hasMore
+        ? {
+            id: lastItem.id,
+            likedAt: lastItem.likedAt,
+          }
+        : null;
 
-        return {
-          items,
-          nextCursor,
-        };
+      return {
+        items,
+        nextCursor,
+      };
     }),
   getHistory: protectedProcedure
     .input(
