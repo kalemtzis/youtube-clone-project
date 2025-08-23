@@ -5,14 +5,18 @@ const nextConfig: NextConfig = {
   images: {
     remotePatterns: [
       {
-        protocol: 'https',
-        hostname: 'image.mux.com'
+        protocol: "https",
+        hostname: "image.mux.com",
       },
       {
-        protocol: 'https',
-        hostname: 'utfs.io'
-      }
-    ]
+        protocol: "https",
+        hostname: "utfs.io",
+      },
+      {
+        protocol: "https",
+        hostname: "l0wbqvioc1.ufs.sh",
+      },
+    ],
   },
 };
 

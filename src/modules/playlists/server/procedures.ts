@@ -40,7 +40,7 @@ export const playlistsRouter = createTRPCRouter({
           ),
           containsVideo: videoId
             ? sql<boolean>`(select exists (
-            select 1 from ${playlistVideos} pv 
+            select 1 from ${playlistVideos} pv
             where pv.playlist_id = ${playlists.id}
             and pv.video_id = ${videoId}
           ))`
@@ -125,7 +125,20 @@ export const playlistsRouter = createTRPCRouter({
       const userId = ctx.user.id;
       const { cursor, limit } = input;
 
+      const playlistVideo = db.$with("playlist_video").as(
+        db
+          .select({
+            ...getTableColumns(videos),
+            playlistId: playlistVideos.playlistId,
+          })
+          .from(playlistVideos)
+          .innerJoin(videos, eq(videos.id, playlistVideos.videoId))
+          .orderBy(desc(playlistVideos.createdAt))
+          .limit(1)
+      );
+
       const data = await db
+        .with(playlistVideo)
         .select({
           ...getTableColumns(playlists),
           user: users,
@@ -133,9 +146,11 @@ export const playlistsRouter = createTRPCRouter({
             playlistVideos,
             eq(playlistVideos.playlistId, playlists.id)
           ),
+          thumbnailUrl: playlistVideo.thumbnailUrl,
         })
         .from(playlists)
         .innerJoin(users, eq(users.id, playlists.userId))
+        .leftJoin(playlistVideo, eq(playlistVideo.playlistId, playlists.id))
         .where(
           and(
             eq(playlists.userId, userId),
