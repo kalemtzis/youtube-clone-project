@@ -1,8 +1,8 @@
 import { db } from "@/db";
-import { users } from "@/db/schema";
+import { subscriptions, users, videos } from "@/db/schema";
 import { baseProcedure, createTRPCRouter } from "@/trpc/init";
 import { TRPCError } from "@trpc/server";
-import { eq } from "drizzle-orm";
+import { eq, getTableColumns, inArray, isNotNull } from "drizzle-orm";
 import z from "zod";
 
 export const usersRouter = createTRPCRouter({
@@ -12,16 +12,49 @@ export const usersRouter = createTRPCRouter({
         userId: z.uuid(),
       })
     )
-    .query(async ({ input }) => {
+    .query(async ({ input, ctx }) => {
+      const { clerkUserId } = ctx;
+
+      let uId;
+
       const [user] = await db
         .select()
         .from(users)
+        .where(inArray(users.clerkId, clerkUserId ? [clerkUserId] : []));
+
+      if (user) uId = user.id;
+
+      const viewerSubscriptions = db.$with("viewer_subscriptions").as(
+        db
+          .select()
+          .from(subscriptions)
+          .where(inArray(subscriptions.viewerId, uId ? [uId] : []))
+      );
+
+      const [existingUser] = await db
+        .with(viewerSubscriptions)
+        .select({
+          ...getTableColumns(users),
+          viewerSubscribed: isNotNull(viewerSubscriptions.viewerId).mapWith(
+            Boolean
+          ),
+          videoCount: db.$count(videos, eq(videos.userId, users.id)),
+          subscriberCount: db.$count(
+            subscriptions,
+            eq(subscriptions.creatorId, users.id)
+          ),
+        })
+        .from(users)
+        .leftJoin(
+          viewerSubscriptions,
+          eq(viewerSubscriptions.creatorId, users.id)
+        )
         .where(eq(users.id, input.userId));
 
-      if (!user) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "User not found" });
+      if (!existingUser) {
+        throw new TRPCError({ code: "NOT_FOUND" });
       }
 
-      return user;
+      return existingUser;
     }),
 });
