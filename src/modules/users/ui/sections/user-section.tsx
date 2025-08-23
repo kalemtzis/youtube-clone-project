@@ -1,11 +1,11 @@
-"use client";
-
+"use client";;
 import { useTRPC } from "@/trpc/client";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { Suspense } from "react";
 import { ErrorBoundary } from "react-error-boundary";
-import { UserPageBanner } from "../components/user-page-banner";
-import { UserPageInfo } from "../components/user-page-info";
+import { UserPageBanner, UserPageBannerSkeleton } from "../components/user-page-banner";
+import { UserPageInfo, UserPageInfoSkeleton } from "../components/user-page-info";
+import { Separator } from "@/components/ui/separator";
 
 interface Props {
   userId: string;
@@ -23,7 +23,11 @@ export const UserSection = (props: Props) => {
 
 const UserSectionSkeleton = () => {
   return (
-    <div>Loading...</div>
+    <div className="flex flex-col">
+      <UserPageBannerSkeleton />
+      <UserPageInfoSkeleton />
+      <Separator />
+    </div>
   )
 }
 
@@ -35,6 +39,7 @@ const UserSectionSuspense = ({userId}: Props) => {
     <div className="flex flex-col">
       <UserPageBanner data={user} />
       <UserPageInfo data={user} />
+      <Separator />
     </div>
-  )
+  );
 }

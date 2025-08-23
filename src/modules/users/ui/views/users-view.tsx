@@ -1,4 +1,5 @@
 import { UserSection } from "../sections/user-section";
+import { UserVideoSection } from "../sections/user-video-section";
 
 interface Props {
   userId: string;
@@ -11,6 +12,7 @@ export const UsersView = ({ userId }: Props) => {
       <UserSection userId={userId} />
       
       {/* User Videos Section */}
+      <UserVideoSection userId={userId} />
     </div>
   )
 }
