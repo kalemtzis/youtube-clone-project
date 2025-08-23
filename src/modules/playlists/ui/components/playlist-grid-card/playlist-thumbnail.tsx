@@ -23,7 +23,7 @@ export const PlaylistThumbnailSkeleton = () => {
 }
 
 export const PlaylistThumbnail = ({
-  title,
+  //title,
   imageUrl,
   videoCount,
   className,

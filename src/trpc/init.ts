@@ -6,7 +6,6 @@ import { eq } from "drizzle-orm";
 import { cache } from "react";
 import superjson from "superjson";
 import { Redis } from "@upstash/redis";
-import { Ratelimit } from "@upstash/ratelimit";
 import { ratelimit } from "@/lib/ratelimit";
 
 export const createTRPCContext = cache(async () => {
@@ -36,7 +35,7 @@ export const createTRPCRouter = t.router;
 export const createCallerFactory = t.createCallerFactory;
 export const baseProcedure = t.procedure;
 
-const redis = new Redis({
+export const redis = new Redis({
   url: process.env.UPSTASH_REDIS_REST_URL,
   token: process.env.UPSTASH_REDIS_REST_TOKEN,
 });

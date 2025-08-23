@@ -13,6 +13,100 @@ import z from "zod";
 import { TRPCError } from "@trpc/server";
 
 export const playlistsRouter = createTRPCRouter({
+  getVideos: protectedProcedure
+    .input(
+      z.object({
+        playlistId: z.uuid(),
+        cursor: z
+          .object({
+            id: z.string(),
+            updatedAt: z.date(),
+          })
+          .nullish(),
+        limit: z.number().min(1).max(100),
+      })
+    )
+    .query(async ({ input, ctx }) => {
+      const { cursor, limit, playlistId } = input;
+      const userId = ctx.user.id;
+
+      const [existingPlaylist] = await db
+        .select()
+        .from(playlists)
+        .where(and(eq(playlists.id, playlistId), eq(playlists.userId, userId)));
+
+      if (!existingPlaylist) {
+        throw new TRPCError({ code: "NOT_FOUND" });
+      }
+
+      const videosFromPlaylist = db.$with("playlist_videos").as(
+        db
+          .select({
+            videoId: playlistVideos.videoId,
+          })
+          .from(playlistVideos)
+          .where(eq(playlistVideos.playlistId, playlistId))
+      );
+
+      const data = await db
+        .with(videosFromPlaylist)
+        .select({
+          ...getTableColumns(videos),
+          user: users,
+          viewCount: db.$count(videoViews, eq(videoViews.videoId, videos.id)),
+          likeCount: db.$count(
+            videoReactions,
+            and(
+              eq(videoReactions.videoId, videos.id),
+              eq(videoReactions.type, "like")
+            )
+          ),
+          dislikeCount: db.$count(
+            videoReactions,
+            and(
+              eq(videoReactions.videoId, videos.id),
+              eq(videoReactions.type, "dislike")
+            )
+          ),
+        })
+        .from(videos)
+        .innerJoin(users, eq(users.id, videos.userId))
+        .innerJoin(
+          videosFromPlaylist,
+          eq(videos.id, videosFromPlaylist.videoId)
+        )
+        .where(
+          and(
+            eq(videos.visibility, "public"),
+            cursor
+              ? or(
+                  lt(videos.updatedAt, cursor.updatedAt),
+                  and(
+                    eq(videos.updatedAt, cursor.updatedAt),
+                    lt(videos.id, cursor.id)
+                  )
+                )
+              : undefined
+          )
+        )
+        .orderBy(desc(videos.updatedAt), desc(videos.id))
+        .limit(limit + 1);
+
+      const hasMore = data.length > limit;
+      const items = hasMore ? data.slice(0, -1) : data;
+      const lastItem = items[items.length - 1];
+      const nextCursor = hasMore
+        ? {
+            id: lastItem.id,
+            updatedAt: lastItem.updatedAt,
+          }
+        : null;
+
+      return {
+        items,
+        nextCursor,
+      };
+    }),
   getManyForVideo: protectedProcedure
     .input(
       z.object({
@@ -93,10 +187,8 @@ export const playlistsRouter = createTRPCRouter({
       const [playlist] = await db
         .select({
           ...getTableColumns(playlists),
-          user: users,
         })
         .from(playlists)
-        .innerJoin(users, eq(users.id, playlists.userId))
         .where(and(eq(playlists.id, playlistId), eq(playlists.userId, userId)));
 
       if (!playlist) {
@@ -108,7 +200,6 @@ export const playlistsRouter = createTRPCRouter({
 
       return playlist;
     }),
-  // ! TODO: add information about number of videos in the playlist and maybe a thumbnail from the first video in the playlist (populate)
   getMany: protectedProcedure
     .input(
       z.object({
