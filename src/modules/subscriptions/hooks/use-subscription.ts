@@ -51,6 +51,7 @@ export const useSubscription = ({
       },
     })
   );
+
   const unsubscribe = useMutation(
     trpc.subscriptions.remove.mutationOptions({
       onSuccess: () => {
