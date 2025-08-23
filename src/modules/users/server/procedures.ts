@@ -17,7 +17,7 @@ export const usersRouter = createTRPCRouter({
         userId: z.uuid(),
       })
     )
-    .mutation(async ({ ctx, input }) => {
+    .mutation(async ({ input }) => {
       const { userId } = input;
 
       const [user] = await db.select().from(users).where(eq(users.id, userId));

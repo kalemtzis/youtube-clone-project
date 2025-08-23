@@ -1,6 +1,5 @@
 import { db } from "@/db";
 import {
-  commentReactions,
   comments,
   users,
   videoReactions,

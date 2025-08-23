@@ -3,7 +3,6 @@
 import { cn } from "@/lib/utils";
 import { UsersGetOneOutput } from "../../types";
 import { useAuth } from "@clerk/nextjs";
-import { Button } from "@/components/ui/button";
 import { Edit2Icon, RefreshCcwDotIcon } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useState } from "react";
@@ -11,11 +10,6 @@ import { BannerAddModal } from "./banner-add-modal";
 import { useTRPC } from "@/trpc/client";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import { BunnerButton } from "./bunner-button";
 
 interface Props {

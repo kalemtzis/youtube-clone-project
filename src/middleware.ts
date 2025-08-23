@@ -1,6 +1,11 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 
-const isPrivateRoute = createRouteMatcher(["/studio(.*)"]);
+const isPrivateRoute = createRouteMatcher([
+  "/studio(.*)",
+  "/subscriptions",
+  "/feed/subscriptions",
+  "/playlists(.*)",
+]);
 
 export default clerkMiddleware(async (auth, req) => {
   if (isPrivateRoute(req)) await auth.protect();
