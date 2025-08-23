@@ -1,11 +1,48 @@
 import { db } from "@/db";
 import { subscriptions, users, videos } from "@/db/schema";
-import { baseProcedure, createTRPCRouter } from "@/trpc/init";
+import {
+  baseProcedure,
+  createTRPCRouter,
+  protectedProcedure,
+} from "@/trpc/init";
 import { TRPCError } from "@trpc/server";
 import { eq, getTableColumns, inArray, isNotNull } from "drizzle-orm";
+import { UTApi } from "uploadthing/server";
 import z from "zod";
 
 export const usersRouter = createTRPCRouter({
+  resetBanner: protectedProcedure
+    .input(
+      z.object({
+        userId: z.uuid(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const { userId } = input;
+
+      const [user] = await db.select().from(users).where(eq(users.id, userId));
+
+      if (!user) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "User not found" });
+      }
+
+      if (user.bannerKey) {
+        await new UTApi().deleteFiles(user.bannerKey);
+
+        const [updatedUser] = await db
+          .update(users)
+          .set({
+            bannerKey: null,
+            bannerUrl: null,
+          })
+          .where(eq(users.id, user.id))
+          .returning();
+
+        return updatedUser;
+      }
+
+      throw new TRPCError({ code: "BAD_REQUEST" });
+    }),
   getOne: baseProcedure
     .input(
       z.object({
