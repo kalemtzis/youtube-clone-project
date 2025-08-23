@@ -119,7 +119,7 @@ export const VideoRowCard = ({ data, onRemove, size = "default" }: Props) => {
             </h3>
             {size === "default" && (
               <p className="text-xs text-muted-foreground mt-1">
-                {compactViews} views • {compactLikes} likes
+                {compactViews} views &bull; {compactLikes} likes
               </p>
             )}
             {size === "default" && (
@@ -152,7 +152,7 @@ export const VideoRowCard = ({ data, onRemove, size = "default" }: Props) => {
             {size === "compact" && <UserInfo name={data.user.name} size="sm" />}
             {size === "compact" && (
               <p className="text-xs text-muted-foreground mt-1 line-clamp-1">
-                {compactViews} views • {compactLikes} likes
+                {compactViews} views &bull; {compactLikes} likes
               </p>
             )}
           </Link>

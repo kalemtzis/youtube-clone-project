@@ -16,6 +16,7 @@ import { StudioSidebarHeader } from "./studio-sidebar-header";
 
 export const StudioSidebar = () => {
   const pathname = usePathname();
+  
   return (
     <Sidebar className="pt-16 z-40" collapsible="icon">
       <SidebarContent className="bg-background">

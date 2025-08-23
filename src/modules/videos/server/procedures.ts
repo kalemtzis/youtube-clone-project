@@ -189,6 +189,7 @@ export const videosRouter = createTRPCRouter({
     .input(
       z.object({
         categoryId: z.uuid().nullish(),
+        userId: z.uuid().nullish(),
         cursor: z
           .object({
             id: z.string(),
@@ -199,7 +200,7 @@ export const videosRouter = createTRPCRouter({
       })
     )
     .query(async ({ input }) => {
-      const { cursor, limit, categoryId } = input;
+      const { cursor, limit, categoryId, userId } = input;
 
       const data = await db
         .select({
@@ -226,6 +227,7 @@ export const videosRouter = createTRPCRouter({
         .where(
           and(
             categoryId ? eq(videos.categoryId, categoryId) : undefined,
+            userId ? eq(videos.userId, userId) : undefined,
             eq(videos.visibility, "public"),
             cursor
               ? or(
