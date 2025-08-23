@@ -29,7 +29,7 @@ interface Props {
 
 const formSchema = z.object({
   videoId: z.uuid(),
-  parentId: z.uuid(),
+  parentId: z.uuid().nullish(),
   value: z.string(),
 });
 
@@ -58,19 +58,19 @@ export const CommentForm = ({
   const createComment = useMutation(
     trpc.comments.create.mutationOptions({
       onSuccess: () => {
-        form.reset();
         queryClient.invalidateQueries(
           trpc.comments.getMany.infiniteQueryFilter({ videoId })
         );
         queryClient.invalidateQueries(
           trpc.comments.getMany.infiniteQueryFilter({ videoId, parentId })
         );
+        form.reset();
         toast.success("Comment added!");
         onSuccess?.();
       },
       onError: (error) => {
         if (error.data?.code === "UNAUTHORIZED") clerk.openSignIn();
-        toast.error("Something went wrong");
+        toast.error(error.message);
       },
     })
   );

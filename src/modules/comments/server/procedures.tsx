@@ -1,5 +1,5 @@
 import { db } from "@/db";
-import { commentReactions, comments, users } from "@/db/schema";
+import { commentReactions, comments, users, videos } from "@/db/schema";
 import {
   baseProcedure,
   createTRPCRouter,
@@ -33,10 +33,6 @@ export const commentsRouter = createTRPCRouter({
         .where(and(eq(comments.id, input.id), eq(comments.userId, ctx.user.id)))
         .returning();
 
-      if (!deletedComment) {
-        throw new TRPCError({ code: "NOT_FOUND" });
-      }
-
       return deletedComment;
     }),
   create: protectedProcedure
@@ -57,7 +53,7 @@ export const commentsRouter = createTRPCRouter({
         throw new TRPCError({ code: "NOT_FOUND" });
       }
 
-      if (existingComment.parentId && input.parentId) {
+      if (existingComment?.parentId && input.parentId) {
         throw new TRPCError({ code: "BAD_REQUEST" });
       }
 
@@ -110,6 +106,17 @@ export const commentsRouter = createTRPCRouter({
           .where(inArray(commentReactions.userId, userId ? [userId] : []))
       );
 
+      const videoInfo = db.$with("video_info").as(
+        db
+          .select({
+            creatorId: users.clerkId,
+            videoId: videos.id,
+          })
+          .from(videos)
+          .innerJoin(users, eq(users.id, videos.userId))
+          .where(eq(videos.id, videoId))
+      );
+
       const replies = db.$with("replies").as(
         db
           .select({
@@ -129,12 +136,13 @@ export const commentsRouter = createTRPCRouter({
           .from(comments)
           .where(and(eq(comments.videoId, videoId), isNull(comments.parentId))),
         db
-          .with(viewerReactions, replies)
+          .with(viewerReactions, replies, videoInfo)
           .select({
             ...getTableColumns(comments),
             user: users,
             viewerReaction: viewerReactions.type,
             replyCount: replies.count,
+            createorId: videoInfo.creatorId,
             likeCount: db.$count(
               commentReactions,
               and(
@@ -151,6 +159,10 @@ export const commentsRouter = createTRPCRouter({
             ),
           })
           .from(comments)
+          .innerJoin(users, eq(users.id, comments.userId))
+          .leftJoin(viewerReactions, eq(comments.id, viewerReactions.commentId))
+          .leftJoin(replies, eq(comments.id, replies.parentId))
+          .leftJoin(videoInfo, eq(videoInfo.videoId, comments.videoId))
           .where(
             and(
               eq(comments.videoId, videoId),
@@ -168,9 +180,6 @@ export const commentsRouter = createTRPCRouter({
                 : undefined
             )
           )
-          .innerJoin(users, eq(users.id, comments.userId))
-          .leftJoin(viewerReactions, eq(comments.id, viewerReactions.commentId))
-          .leftJoin(replies, eq(comments.id, replies.parentId))
           .orderBy(desc(comments.updatedAt), desc(comments.id))
           .limit(limit + 1),
       ]);
